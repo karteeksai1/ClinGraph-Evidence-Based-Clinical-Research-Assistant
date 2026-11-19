@@ -16,12 +16,12 @@ ClinGraph is a clinical research assistant that helps users discover, connect, c
 ### MVP functional requirements
 
 1. Users can submit natural-language clinical research questions.
-2. Users can search biomedical literature using keyword and semantic search.
+2. Users can search biomedical literature using hybrid BM25 and dense-vector retrieval.
 3. The system can ingest metadata and abstracts from PubMed/Europe PMC and trial data from ClinicalTrials.gov.
 4. The system can parse documents into searchable chunks and generate embeddings.
 5. The system can retrieve and rank evidence using hybrid search:
-   - exact keyword and Boolean matching;
-   - semantic vector similarity;
+   - BM25 lexical relevance scoring;
+   - dense-vector semantic similarity;
    - metadata filters such as date, study type, condition, and intervention.
 6. The system can generate a structured answer with:
    - concise conclusion;
@@ -66,7 +66,7 @@ The first release should focus on literature and trial research. It should not m
               +----------+-------------+-------------+----+
                          |             |             |
                   +------v-----+ +-----v------+ +----v----------+
-                  | Keyword    | | Vector     | | Knowledge     |
+                  | BM25       | | Dense      | | Knowledge     |
                   | Search     | | Search     | | Graph         |
                   | OpenSearch | | pgvector   | | Neo4j         |
                   +------+-----+ +-----+------+ +----+----------+
@@ -99,7 +99,7 @@ The first release should focus on literature and trial research. It should not m
 - **API gateway:** FastAPI or NestJS service providing authentication, authorization, rate limiting, and the public API.
 - **Research orchestrator:** Decomposes questions, extracts medical entities, coordinates retrieval, reranks evidence, synthesizes answers, and validates citations.
 - **Evidence database:** PostgreSQL stores users, sources, studies, claims, citations, entities, processing status, and audit records.
-- **Hybrid search:** PostgreSQL with `pgvector` for semantic search, plus OpenSearch/Elasticsearch for exact keyword, Boolean, and faceted search.
+- **Hybrid search:** Combine BM25 lexical scores from OpenSearch/Elasticsearch with dense-vector similarity from PostgreSQL `pgvector`. Apply metadata filters before weighted score fusion and reranking.
 - **Knowledge graph:** Neo4j stores relationships such as `Study evaluates Intervention`, `Study reports Outcome`, and `Paper supports Claim`.
 - **Document pipeline:** Downloads source documents, extracts text and tables, chunks content, detects entities, generates embeddings, and links evidence to canonical records.
 - **Object storage:** S3-compatible storage for PDFs, XML, extracted tables, and processing artifacts.
@@ -111,7 +111,7 @@ The first release should focus on literature and trial research. It should not m
 ```text
 User question
     -> query planning and medical entity extraction
-    -> keyword search + vector search + graph traversal
+    -> BM25 search + dense-vector search + graph traversal
     -> evidence filtering and reranking
     -> claim extraction
     -> answer synthesis
@@ -121,7 +121,7 @@ User question
 
 ### Initial technology recommendation
 
-For the MVP, use Next.js, FastAPI, PostgreSQL with `pgvector`, Redis-based background jobs, S3-compatible object storage, and PubMed/ClinicalTrials.gov connectors. Add OpenSearch and Neo4j when search volume and graph use cases justify the operational complexity.
+For the MVP, use Next.js, FastAPI, PostgreSQL with `pgvector`, Redis-based background jobs, S3-compatible object storage, and PubMed/ClinicalTrials.gov connectors. Use OpenSearch for BM25 retrieval and add Neo4j when graph use cases justify the operational complexity.
 
 ### Suggested repository structure
 
@@ -154,3 +154,14 @@ clinGraph/
 - Preserve and display conflicting findings instead of silently resolving them.
 - Log searches, retrieved sources, prompts, model versions, and generated answers.
 - Add human review workflows before supporting any patient-specific or clinical-decision use case.
+
+## Local development
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn backend.app.main:app --reload
+```
+
+The initial API exposes `GET /health` and `POST /api/v1/search`. The search endpoint currently uses deterministic demo documents and a placeholder query embedding; the next implementation step is connecting document ingestion, a real embedding provider, PostgreSQL/`pgvector`, and OpenSearch BM25 retrieval.
