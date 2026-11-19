@@ -55,12 +55,12 @@ The first release should focus on literature and trial research. It should not m
                          +----------+---------+
                                     |
                          +----------v---------+
-                         | API Gateway / Auth |
-                         | RBAC | Rate Limits |
+                         | Backend API Service |
+                         | Auth | API | Proxy  |
                          +----------+---------+
                                     |
               +---------------------v---------------------+
-              |       Clinical Research Orchestrator      |
+              |              AI Service                  |
               | Query planning | Retrieval | Synthesis    |
               | Citation validation | Confidence scoring |
               +----------+-------------+-------------+----+
@@ -96,8 +96,8 @@ The first release should focus on literature and trial research. It should not m
 ### Main components
 
 - **Web application:** React/Next.js interface for search, conversational research, study comparison, citations, and graph exploration.
-- **API gateway:** FastAPI or NestJS service providing authentication, authorization, rate limiting, and the public API.
-- **Research orchestrator:** Decomposes questions, extracts medical entities, coordinates retrieval, reranks evidence, synthesizes answers, and validates citations.
+- **Backend service:** FastAPI public API providing authentication, authorization, rate limiting, request validation, and the frontend-facing contract.
+- **AI service:** LangGraph workflow that decomposes questions, coordinates retrieval, synthesizes answers, and validates citations.
 - **Evidence database:** PostgreSQL stores users, sources, studies, claims, citations, entities, processing status, and audit records.
 - **Hybrid search:** Combine BM25 lexical scores from OpenSearch/Elasticsearch with dense-vector similarity from PostgreSQL `pgvector`. Apply metadata filters before weighted score fusion and reranking.
 - **Knowledge graph:** Neo4j stores relationships such as `Study evaluates Intervention`, `Study reports Outcome`, and `Paper supports Claim`.
@@ -127,22 +127,15 @@ For the MVP, use Next.js, FastAPI, PostgreSQL with `pgvector`, Redis-based backg
 
 ```text
 clinGraph/
-├── apps/
-│   ├── web/
-│   └── api/
 ├── services/
-│   ├── ingestion/
-│   ├── retrieval/
-│   ├── graph/
-│   └── evaluation/
+│   ├── frontend/       # Next.js web application
+│   ├── backend/        # Public FastAPI API and service boundary
+│   └── ai/             # LangGraph, retrieval, synthesis, ingestion
 ├── packages/
-│   ├── schemas/
-│   ├── prompts/
-│   └── clinical-ontology/
-├── infrastructure/
-│   ├── docker/
-│   └── terraform/
-├── tests/
+│   └── contracts/      # Shared API contract
+├── docker-compose.yml
+├── Makefile
+├── .env.example
 └── README.md
 ```
 
@@ -157,11 +150,16 @@ clinGraph/
 
 ## Local development
 
+The services are independently runnable:
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn backend.app.main:app --reload
+# Run all three services
+docker compose up --build
+
+# Or run them separately
+make ai        # AI service on :8001
+make backend   # Backend API on :8000
+make frontend  # Next.js UI on :3000
 ```
 
-The initial API exposes `GET /health`, `POST /api/v1/search`, `POST /api/v1/research`, `POST /api/v1/ingest/pubmed`, and `POST /api/v1/ingest/clinicaltrials`. The research endpoint runs a LangGraph workflow with explicit planning, BM25+dense retrieval, synthesis, and citation verification nodes. The local implementation uses deterministic hashing embeddings and an in-memory corpus; replace these adapters with a production embedding provider, PostgreSQL/`pgvector`, and OpenSearch when deploying at scale.
+The frontend calls only the backend. The backend owns the public API and forwards research, search, and ingestion requests to the AI service. The AI service owns LangGraph, BM25+dense retrieval, source connectors, and evidence synthesis. The local implementation uses deterministic hashing embeddings and an in-memory corpus; replace these adapters with PostgreSQL/`pgvector`, OpenSearch, and production embedding/LLM providers when deploying at scale.

@@ -4,15 +4,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str = "ClinGraph"
+    app_name: str = "ClinGraph AI Service"
     app_env: str = "development"
-    api_host: str = "127.0.0.1"
-    api_port: int = 8000
+    ai_host: str = "0.0.0.0"
+    ai_port: int = 8001
+    backend_shared_secret: str = "dev-only-secret"
     bm25_weight: float = 0.5
     dense_weight: float = 0.5
-    database_url: str = ""
-    redis_url: str = "redis://localhost:6379/0"
-    default_search_limit: int = 10
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

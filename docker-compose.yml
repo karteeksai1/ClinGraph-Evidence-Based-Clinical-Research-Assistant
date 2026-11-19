@@ -1,0 +1,30 @@
+services:
+  ai:
+    build: ./services/ai
+    env_file: .env
+    environment:
+      AI_HOST: 0.0.0.0
+      AI_PORT: 8001
+    ports:
+      - "8001:8001"
+
+  backend:
+    build: ./services/backend
+    env_file: .env
+    environment:
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8000
+      AI_SERVICE_URL: http://ai:8001
+    depends_on:
+      - ai
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./services/frontend
+    environment:
+      NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"

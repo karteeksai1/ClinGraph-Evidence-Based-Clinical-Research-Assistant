@@ -1,0 +1,68 @@
+openapi: 3.0.3
+info:
+  title: ClinGraph Public API
+  version: 0.1.0
+paths:
+  /api/v1/search:
+    post:
+      operationId: searchEvidence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchResponse' }
+  /api/v1/research:
+    post:
+      operationId: researchQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SearchRequest' }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResearchResponse' }
+components:
+  schemas:
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query: { type: string, minLength: 2, maxLength: 500 }
+        limit: { type: integer, minimum: 1, maximum: 50, default: 10 }
+    SearchResult:
+      type: object
+      required: [document_id, title, bm25_score, dense_score, hybrid_score]
+      properties:
+        document_id: { type: string }
+        title: { type: string }
+        excerpt: { type: string }
+        source: { type: string }
+        url: { type: string, nullable: true }
+        publication_date: { type: string, nullable: true }
+        bm25_score: { type: number }
+        dense_score: { type: number }
+        hybrid_score: { type: number }
+    SearchResponse:
+      type: object
+      required: [query, results]
+      properties:
+        query: { type: string }
+        results: { type: array, items: { $ref: '#/components/schemas/SearchResult' } }
+    ResearchResponse:
+      allOf:
+        - $ref: '#/components/schemas/SearchResponse'
+        - type: object
+          required: [answer, claims, citations, confidence]
+          properties:
+            answer: { type: string }
+            claims: { type: array, items: { type: string } }
+            citations: { type: array, items: { type: string } }
+            confidence: { type: string }

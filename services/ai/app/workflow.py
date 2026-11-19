@@ -14,12 +14,9 @@ class ResearchState(TypedDict, total=False):
     citations: list[str]
     answer: str
     confidence: str
-    verification_errors: list[str]
 
 
 class ClinicalResearchWorkflow:
-    """Traceable research workflow with explicit evidence boundaries."""
-
     def __init__(self, retriever: HybridRetriever):
         self.retriever = retriever
         self.graph = self._build_graph()
@@ -49,34 +46,19 @@ class ClinicalResearchWorkflow:
         results = state.get("results", [])
         if not results:
             return {"answer": "No evidence was retrieved for this question.", "claims": [], "citations": []}
-
-        claims = []
-        citations = []
-        evidence_lines = []
-        for result in results:
-            citation = result["document_id"]
-            citations.append(citation)
-            claims.append(f"{result['title']} is a retrieved source relevant to the query [{citation}].")
-            evidence_lines.append(f"- {result['title']}: {result['excerpt']} [{citation}]")
-        answer = (
-            "Retrieved evidence is summarized below. This is research support, not medical advice.\n"
-            + "\n".join(evidence_lines)
-        )
-        return {"answer": answer, "claims": claims, "citations": citations}
+        citations = [result["document_id"] for result in results]
+        claims = [f"{result['title']} is a retrieved source relevant to the query [{result['document_id']}]." for result in results]
+        lines = [f"- {result['title']}: {result['excerpt']} [{result['document_id']}]" for result in results]
+        return {"answer": "Retrieved evidence is summarized below. This is research support, not medical advice.\n" + "\n".join(lines),
+                "claims": claims, "citations": citations}
 
     @staticmethod
     def verify(state: ResearchState) -> dict:
         citations = set(state.get("citations", []))
-        errors = [
-            f"Uncited claim: {claim}"
-            for claim in state.get("claims", [])
-            if not any(f"[{citation}]" in claim for citation in citations)
-        ]
+        errors = [claim for claim in state.get("claims", []) if not any(f"[{citation}]" in claim for citation in citations)]
         if errors:
-            return {"confidence": "blocked — citation verification failed", "verification_errors": errors}
-        if not citations:
-            return {"confidence": "insufficient evidence", "verification_errors": []}
-        return {"confidence": "moderate — retrieved evidence requires human review", "verification_errors": []}
+            return {"confidence": "blocked — citation verification failed"}
+        return {"confidence": "moderate — retrieved evidence requires human review" if citations else "insufficient evidence"}
 
     def invoke(self, query: str, limit: int = 10) -> ResearchState:
         return self.graph.invoke({"query": query, "limit": limit})

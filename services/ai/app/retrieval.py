@@ -4,7 +4,6 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 
-
 TOKEN_PATTERN = re.compile(r"[a-z0-9]+")
 
 
@@ -13,8 +12,6 @@ def tokenize(value: str) -> list[str]:
 
 
 class LocalEmbedder:
-    """Deterministic dense embedder for local development."""
-
     def __init__(self, dimensions: int = 64):
         self.dimensions = dimensions
 
@@ -40,8 +37,6 @@ class Document:
 
 
 class HybridRetriever:
-    """In-memory BM25 + dense-vector retriever with corpus-aware scoring."""
-
     def __init__(self, documents: list[Document] | None = None, bm25_weight: float = 0.5,
                  dense_weight: float = 0.5, embedder: LocalEmbedder | None = None):
         total = bm25_weight + dense_weight
@@ -92,10 +87,7 @@ class HybridRetriever:
         return sorted(results, key=lambda item: item["hybrid_score"], reverse=True)[:limit]
 
     def _rebuild_statistics(self) -> None:
-        self._tokenized = {
-            document.document_id: tokenize(f"{document.title} {document.text}")
-            for document in self.documents
-        }
+        self._tokenized = {document.document_id: tokenize(f"{document.title} {document.text}") for document in self.documents}
         self._document_frequency = Counter()
         for tokens in self._tokenized.values():
             self._document_frequency.update(set(tokens))
@@ -104,8 +96,6 @@ class HybridRetriever:
 
     def _bm25(self, query_tokens: list[str], document_id: str, k1: float = 1.2, b: float = 0.75) -> float:
         document_tokens = self._tokenized.get(document_id, [])
-        if not document_tokens:
-            return 0.0
         term_counts = Counter(document_tokens)
         document_count = max(len(self.documents), 1)
         score = 0.0
@@ -114,7 +104,7 @@ class HybridRetriever:
             if not frequency:
                 continue
             idf = math.log(1 + (document_count - self._document_frequency[token] + 0.5) /
-                            (self._document_frequency[token] + 0.5))
+                           (self._document_frequency[token] + 0.5))
             denominator = frequency + k1 * (1 - b + b * len(document_tokens) / self._average_document_length)
             score += idf * (frequency * (k1 + 1)) / denominator
         return score

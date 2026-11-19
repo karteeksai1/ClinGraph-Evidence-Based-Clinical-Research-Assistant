@@ -23,10 +23,6 @@ class SearchResponse(BaseModel):
     results: list[SearchResult]
 
 
-class ResearchRequest(SearchRequest):
-    """Request for the LangGraph evidence workflow."""
-
-
 class ResearchResponse(BaseModel):
     query: str
     answer: str
@@ -34,11 +30,6 @@ class ResearchResponse(BaseModel):
     citations: list[str]
     confidence: str
     results: list[SearchResult]
-
-
-class IngestRequest(BaseModel):
-    query: str = Field(min_length=2, max_length=500)
-    limit: int = Field(default=10, ge=1, le=50)
 
 
 class IngestResponse(BaseModel):

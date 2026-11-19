@@ -1,1 +1,0 @@
-"""ClinGraph API application."""
