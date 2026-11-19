@@ -42,6 +42,7 @@ class HybridRetriever:
             ranked.append({
                 "document_id": doc.document_id,
                 "title": doc.title,
+                "excerpt": doc.text,
                 "bm25_score": round(bm25_score, 4),
                 "dense_score": round(dense_score, 4),
                 "hybrid_score": round(hybrid_score, 4),

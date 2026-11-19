@@ -164,4 +164,4 @@ pip install -r requirements.txt
 uvicorn backend.app.main:app --reload
 ```
 
-The initial API exposes `GET /health` and `POST /api/v1/search`. The search endpoint currently uses deterministic demo documents and a placeholder query embedding; the next implementation step is connecting document ingestion, a real embedding provider, PostgreSQL/`pgvector`, and OpenSearch BM25 retrieval.
+The initial API exposes `GET /health`, `POST /api/v1/search`, and `POST /api/v1/research`. The research endpoint runs a LangGraph workflow with explicit planning, BM25+dense retrieval, synthesis, and citation verification nodes. It currently uses deterministic demo documents and a placeholder query embedding; the next implementation step is connecting document ingestion, a real embedding provider, PostgreSQL/`pgvector`, and OpenSearch BM25 retrieval.

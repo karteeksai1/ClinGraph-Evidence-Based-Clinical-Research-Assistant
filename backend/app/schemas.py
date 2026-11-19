@@ -9,6 +9,7 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     document_id: str
     title: str
+    excerpt: str = ""
     bm25_score: float
     dense_score: float
     hybrid_score: float
@@ -16,4 +17,17 @@ class SearchResult(BaseModel):
 
 class SearchResponse(BaseModel):
     query: str
+    results: list[SearchResult]
+
+
+class ResearchRequest(SearchRequest):
+    """Request for the LangGraph evidence workflow."""
+
+
+class ResearchResponse(BaseModel):
+    query: str
+    answer: str
+    claims: list[str]
+    citations: list[str]
+    confidence: str
     results: list[SearchResult]
