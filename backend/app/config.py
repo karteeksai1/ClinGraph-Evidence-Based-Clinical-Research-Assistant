@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     dense_weight: float = 0.5
     database_url: str = ""
     redis_url: str = "redis://localhost:6379/0"
+    default_search_limit: int = 10
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
