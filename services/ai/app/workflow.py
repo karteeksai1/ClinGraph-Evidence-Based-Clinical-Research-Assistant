@@ -17,8 +17,9 @@ class ResearchState(TypedDict, total=False):
 
 
 class ClinicalResearchWorkflow:
-    def __init__(self, retriever: HybridRetriever):
+    def __init__(self, retriever: HybridRetriever, synthesizer=None):
         self.retriever = retriever
+        self.synthesizer = synthesizer
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -41,12 +42,19 @@ class ClinicalResearchWorkflow:
     def retrieve(self, state: ResearchState) -> dict:
         return {"results": self.retriever.search(state["search_query"], state.get("limit", 10))}
 
-    @staticmethod
-    def synthesize(state: ResearchState) -> dict:
+    def synthesize(self, state: ResearchState) -> dict:
         results = state.get("results", [])
         if not results:
             return {"answer": "No evidence was retrieved for this question.", "claims": [], "citations": []}
         citations = [result["document_id"] for result in results]
+        if self.synthesizer:
+            answer = self.synthesizer.synthesize(state["query"], results)
+            if answer:
+                return {
+                    "answer": answer,
+                    "claims": [f"Evidence was synthesized from [{citation}]." for citation in citations],
+                    "citations": citations,
+                }
         claims = [f"{result['title']} is a retrieved source relevant to the query [{result['document_id']}]." for result in results]
         lines = [f"- {result['title']}: {result['excerpt']} [{result['document_id']}]" for result in results]
         return {"answer": "Retrieved evidence is summarized below. This is research support, not medical advice.\n" + "\n".join(lines),

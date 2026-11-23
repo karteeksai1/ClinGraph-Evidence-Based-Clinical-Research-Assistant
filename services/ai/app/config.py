@@ -14,6 +14,15 @@ class Settings(BaseSettings):
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
     embedding_device: str = "cpu"
     embedding_local_files_only: bool = False
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+    database_url: str = ""
+    pinecone_api_key: str = ""
+    pinecone_index_name: str = "clingraph-evidence"
+    pinecone_index_host: str = ""
+    pinecone_namespace: str = "clinical-evidence"
+    redis_url: str = ""
+    redis_cache_ttl_seconds: int = 3600
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

@@ -56,13 +56,15 @@ class Document:
 
 class HybridRetriever:
     def __init__(self, documents: list[Document] | None = None, bm25_weight: float = 0.5,
-                 dense_weight: float = 0.5, embedder: LocalEmbedder | None = None):
+                 dense_weight: float = 0.5, embedder: LocalEmbedder | None = None,
+                 vector_store=None):
         total = bm25_weight + dense_weight
         if total <= 0:
             raise ValueError("BM25 and dense weights must sum to a positive value")
         self.bm25_weight = bm25_weight / total
         self.dense_weight = dense_weight / total
         self.embedder = embedder or LocalEmbedder()
+        self.vector_store = vector_store
         self.documents: list[Document] = []
         self._tokenized: dict[str, list[str]] = {}
         self._document_frequency: Counter[str] = Counter()
@@ -76,6 +78,8 @@ class HybridRetriever:
             current[document.document_id] = Document(**{**document.__dict__, "embedding": embedding})
         self.documents = list(current.values())
         self._rebuild_statistics()
+        if self.vector_store:
+            self.vector_store.upsert(self.documents)
 
     def count(self) -> int:
         return len(self.documents)
@@ -84,7 +88,11 @@ class HybridRetriever:
         query_tokens = tokenize(query)
         query_embedding = self.embedder.embed_query(query)
         bm25_scores = [self._bm25(query_tokens, document.document_id) for document in self.documents]
-        dense_scores = [self._cosine(query_embedding, document.embedding) for document in self.documents]
+        pinecone_scores = self.vector_store.query(query_embedding, limit) if self.vector_store else {}
+        dense_scores = [
+            pinecone_scores.get(document.document_id, self._cosine(query_embedding, document.embedding))
+            for document in self.documents
+        ]
         max_bm25 = max(bm25_scores, default=0.0) or 1.0
         results = []
         for document, bm25_score, dense_score in zip(self.documents, bm25_scores, dense_scores):
