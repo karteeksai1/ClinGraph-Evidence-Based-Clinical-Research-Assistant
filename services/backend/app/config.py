@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     backend_port: int = 8000
     ai_service_url: str = "http://localhost:8001"
     request_timeout_seconds: float = 45.0
+    frontend_url: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

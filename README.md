@@ -29,7 +29,7 @@ ClinGraph is a clinical research assistant that helps users discover, connect, c
    - limitations and conflicting evidence;
    - inline citations;
    - linked source documents.
-7. Users can inspect the evidence graph for relationships between studies, interventions, conditions, outcomes, and claims.
+7. Users can inspect retrieved sources, metadata, evidence excerpts, and citation links.
 8. The system records source provenance, retrieval context, and answer-generation audit data.
 
 ### Non-functional requirements
@@ -51,7 +51,7 @@ The first release should focus on literature and trial research. It should not m
 ```text
                          +--------------------+
                          |   Web Application   |
-                         | Search | Chat | Graph|
+                         | Search | Research | Sources |
                          +----------+---------+
                                     |
                          +----------v---------+
@@ -66,9 +66,9 @@ The first release should focus on literature and trial research. It should not m
               +----------+-------------+-------------+----+
                          |             |             |
                   +------v-----+ +-----v------+ +----v----------+
-                  | BM25       | | Dense      | | Knowledge     |
-                  | Search     | | Search     | | Graph         |
-                  | BM25 local | | Pinecone   | | Metadata DB   |
+                  | BM25       | | Dense      | | Metadata    |
+                  | Search     | | Search     | | Database    |
+                  | BM25 local | | Pinecone   | | Neon        |
                   +------+-----+ +-----+------+ +----+----------+
                          |             |             |
                          +-------------v-------------+
@@ -76,15 +76,15 @@ The first release should focus on literature and trial research. It should not m
                          +-------------+-------------+
                                        |
                          +-------------v-------------+
-                         | PostgreSQL                |
-                         | Sources | Claims | Studies |
-                         | Citations | Users | Audits |
+                         | Neon PostgreSQL            |
+                         | Documents | Sources | Audit |
+                         | Metadata | Citations       |
                          +-------------+-------------+
                                        |
                          +-------------v-------------+
-                         | Document Processing        |
-                         | PDF/XML | Chunking | NER    |
-                         | Embeddings | Entity links  |
+                         | Local Embeddings + Groq   |
+                         | Sentence Transformers     |
+                         | Grounded synthesis        |
                          +-------------+-------------+
                                        |
        +-------------------------------v------------------------------+

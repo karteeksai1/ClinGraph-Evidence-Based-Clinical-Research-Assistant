@@ -27,6 +27,8 @@ class DocumentRecord(Base):
 class DocumentRepository:
     def __init__(self, database_url: str):
         self.enabled = bool(database_url)
+        if database_url.startswith("postgresql://"):
+            database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
         self.engine = create_engine(database_url, pool_pre_ping=True) if self.enabled else None
 
     def initialize(self) -> None:
