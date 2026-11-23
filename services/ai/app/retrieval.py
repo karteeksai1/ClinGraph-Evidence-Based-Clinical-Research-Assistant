@@ -1,4 +1,3 @@
-import hashlib
 import math
 import re
 from collections import Counter
@@ -12,17 +11,36 @@ def tokenize(value: str) -> list[str]:
 
 
 class LocalEmbedder:
-    def __init__(self, dimensions: int = 64):
-        self.dimensions = dimensions
+    """Sentence Transformers embedder running fully on the local machine."""
 
-    def embed(self, text: str) -> tuple[float, ...]:
-        vector = [0.0] * self.dimensions
-        for token in tokenize(text):
-            digest = hashlib.sha256(token.encode("utf-8")).digest()
-            index = int.from_bytes(digest[:4], "big") % self.dimensions
-            vector[index] += 1.0 if digest[4] % 2 else -1.0
-        norm = math.sqrt(sum(value * value for value in vector))
-        return tuple(value / norm for value in vector) if norm else tuple(vector)
+    def __init__(self, model_name: str, device: str = "cpu", local_files_only: bool = False):
+        try:
+            from sentence_transformers import SentenceTransformer
+        except ImportError as exc:
+            raise RuntimeError(
+                "sentence-transformers is required for local embeddings. "
+                "Install services/ai/requirements.txt."
+            ) from exc
+        self.model_name = model_name
+        self.model = SentenceTransformer(
+            model_name,
+            device=device,
+            local_files_only=local_files_only,
+        )
+
+    def embed_query(self, text: str) -> tuple[float, ...]:
+        if hasattr(self.model, "encode_query"):
+            vector = self.model.encode_query(text, normalize_embeddings=True)
+        else:
+            vector = self.model.encode(text, normalize_embeddings=True)
+        return tuple(float(value) for value in vector)
+
+    def embed_document(self, text: str) -> tuple[float, ...]:
+        if hasattr(self.model, "encode_document"):
+            vector = self.model.encode_document(text, normalize_embeddings=True)
+        else:
+            vector = self.model.encode(text, normalize_embeddings=True)
+        return tuple(float(value) for value in vector)
 
 
 @dataclass(frozen=True)
@@ -54,7 +72,7 @@ class HybridRetriever:
     def upsert_many(self, documents: list[Document]) -> None:
         current = {document.document_id: document for document in self.documents}
         for document in documents:
-            embedding = document.embedding or self.embedder.embed(f"{document.title} {document.text}")
+            embedding = document.embedding or self.embedder.embed_document(f"{document.title} {document.text}")
             current[document.document_id] = Document(**{**document.__dict__, "embedding": embedding})
         self.documents = list(current.values())
         self._rebuild_statistics()
@@ -64,7 +82,7 @@ class HybridRetriever:
 
     def search(self, query: str, limit: int = 10) -> list[dict]:
         query_tokens = tokenize(query)
-        query_embedding = self.embedder.embed(query)
+        query_embedding = self.embedder.embed_query(query)
         bm25_scores = [self._bm25(query_tokens, document.document_id) for document in self.documents]
         dense_scores = [self._cosine(query_embedding, document.embedding) for document in self.documents]
         max_bm25 = max(bm25_scores, default=0.0) or 1.0

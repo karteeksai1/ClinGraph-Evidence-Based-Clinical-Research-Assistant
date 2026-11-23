@@ -162,4 +162,4 @@ make backend   # Backend API on :8000
 make frontend  # Next.js UI on :3000
 ```
 
-The frontend calls only the backend. The backend owns the public API and forwards research, search, and ingestion requests to the AI service. The AI service owns LangGraph, BM25+dense retrieval, source connectors, and evidence synthesis. The local implementation uses deterministic hashing embeddings and an in-memory corpus; replace these adapters with PostgreSQL/`pgvector`, OpenSearch, and production embedding/LLM providers when deploying at scale.
+The frontend calls only the backend. The backend owns the public API and forwards research, search, and ingestion requests to the AI service. The AI service owns LangGraph, BM25+dense retrieval, source connectors, and evidence synthesis. Dense embeddings run locally through Sentence Transformers using `sentence-transformers/all-MiniLM-L6-v2`; no Hugging Face API key is required. The current corpus is in memory; replace it with Pinecone and Neon persistence when deploying at scale.

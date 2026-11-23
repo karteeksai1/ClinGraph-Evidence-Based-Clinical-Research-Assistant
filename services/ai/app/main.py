@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 
 from .config import get_settings
-from .retrieval import Document, HybridRetriever
+from .retrieval import Document, HybridRetriever, LocalEmbedder
 from .schemas import IngestRequest, IngestResponse, ResearchResponse, SearchRequest, SearchResponse
 from .sources import ClinicalTrialsClient, PubMedClient, SourceError
 from .workflow import ClinicalResearchWorkflow
@@ -13,7 +13,13 @@ retriever = HybridRetriever([
              "hypertension blood pressure intervention clinical trial evidence"),
     Document("demo-002", "Clinical outcomes in type 2 diabetes",
              "type 2 diabetes clinical outcomes glucose intervention evidence"),
-], settings.bm25_weight, settings.dense_weight)
+], settings.bm25_weight, settings.dense_weight,
+    embedder=LocalEmbedder(
+        model_name=settings.embedding_model,
+        device=settings.embedding_device,
+        local_files_only=settings.embedding_local_files_only,
+    ),
+)
 workflow = ClinicalResearchWorkflow(retriever)
 
 

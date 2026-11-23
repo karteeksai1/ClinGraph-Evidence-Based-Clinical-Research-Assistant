@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     backend_shared_secret: str = "dev-only-secret"
     bm25_weight: float = 0.5
     dense_weight: float = 0.5
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_device: str = "cpu"
+    embedding_local_files_only: bool = False
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
