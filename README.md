@@ -68,7 +68,7 @@ The first release should focus on literature and trial research. It should not m
                   +------v-----+ +-----v------+ +----v----------+
                   | BM25       | | Dense      | | Knowledge     |
                   | Search     | | Search     | | Graph         |
-                  | OpenSearch | | pgvector   | | Neo4j         |
+                  | BM25 local | | Pinecone   | | Metadata DB   |
                   +------+-----+ +-----+------+ +----+----------+
                          |             |             |
                          +-------------v-------------+
@@ -95,23 +95,22 @@ The first release should focus on literature and trial research. It should not m
 
 ### Main components
 
-- **Web application:** React/Next.js interface for search, conversational research, study comparison, citations, and graph exploration.
-- **Backend service:** FastAPI public API providing authentication, authorization, rate limiting, request validation, and the frontend-facing contract.
+- **Web application:** Next.js + Tailwind interface for research questions, evidence summaries, and source inspection.
+- **Backend service:** FastAPI public API and service boundary. Authentication and production authorization are intentionally deferred for this personal project.
 - **AI service:** LangGraph workflow that decomposes questions, coordinates retrieval, synthesizes answers, and validates citations.
-- **Evidence database:** PostgreSQL stores users, sources, studies, claims, citations, entities, processing status, and audit records.
-- **Hybrid search:** Combine BM25 lexical scores from OpenSearch/Elasticsearch with dense-vector similarity from PostgreSQL `pgvector`. Apply metadata filters before weighted score fusion and reranking.
-- **Knowledge graph:** Neo4j stores relationships such as `Study evaluates Intervention`, `Study reports Outcome`, and `Paper supports Claim`.
-- **Document pipeline:** Downloads source documents, extracts text and tables, chunks content, detects entities, generates embeddings, and links evidence to canonical records.
-- **Object storage:** S3-compatible storage for PDFs, XML, extracted tables, and processing artifacts.
-- **Background processing:** Celery/RQ with Redis for the MVP, or Temporal when workflows require durable orchestration and compensation.
-- **LLM layer:** Use separate model tasks for query planning, information extraction, synthesis, and citation/contradiction verification.
+- **Metadata database:** Neon PostgreSQL stores evidence document metadata and source provenance through SQLAlchemy.
+- **Hybrid search:** Combine local BM25 lexical scores with dense-vector similarity from Pinecone. If Pinecone is unavailable, local cosine similarity is used.
+- **Embedding layer:** Sentence Transformers runs `all-MiniLM-L6-v2` locally and produces 384-dimensional vectors.
+- **LLM layer:** Groq performs grounded answer synthesis; a deterministic local synthesis fallback keeps development possible without a Groq key.
+- **Evidence connectors:** PubMed/NCBI and ClinicalTrials.gov are selected as the initial sources.
+- **Redis:** Reserved for cache and queue integration; background ingestion is synchronous in the current MVP.
 
 ### Query flow
 
 ```text
 User question
     -> query planning and medical entity extraction
-    -> BM25 search + dense-vector search + graph traversal
+    -> BM25 search + Pinecone dense-vector search
     -> evidence filtering and reranking
     -> claim extraction
     -> answer synthesis
@@ -121,7 +120,7 @@ User question
 
 ### Initial technology recommendation
 
-For the MVP, use Next.js, FastAPI, PostgreSQL with `pgvector`, Redis-based background jobs, S3-compatible object storage, and PubMed/ClinicalTrials.gov connectors. Use OpenSearch for BM25 retrieval and add Neo4j when graph use cases justify the operational complexity.
+For this personal project, use Next.js with Tailwind, FastAPI, local Sentence Transformers, Groq, Pinecone, Neon PostgreSQL, Redis, and PubMed/ClinicalTrials.gov connectors. No Docker, deployment platform, graph database, object storage, observability stack, or production authentication is included at this stage.
 
 ### Suggested repository structure
 
@@ -133,7 +132,6 @@ clinGraph/
 │   └── ai/             # LangGraph, retrieval, synthesis, ingestion
 ├── packages/
 │   └── contracts/      # Shared API contract
-├── docker-compose.yml
 ├── Makefile
 ├── .env.example
 └── README.md
@@ -150,16 +148,20 @@ clinGraph/
 
 ## Local development
 
-The services are independently runnable:
+The services are independently runnable from separate terminal windows:
 
 ```bash
-# Run all three services
-docker compose up --build
+# Install dependencies once
+make install
 
-# Or run them separately
-make ai        # AI service on :8001
-make backend   # Backend API on :8000
-make frontend  # Next.js UI on :3000
+# Terminal 1: AI service on :8001
+make ai
+
+# Terminal 2: Backend API on :8000
+make backend
+
+# Terminal 3: Next.js UI on :3000
+make frontend
 ```
 
-The frontend calls only the backend. The backend owns the public API and forwards research, search, and ingestion requests to the AI service. The AI service owns LangGraph, BM25+dense retrieval, source connectors, and evidence synthesis. Dense embeddings run locally through Sentence Transformers using `sentence-transformers/all-MiniLM-L6-v2`; no Hugging Face API key is required. The current corpus is in memory; replace it with Pinecone and Neon persistence when deploying at scale.
+The frontend calls only the backend. The backend owns the public API and forwards research, search, and ingestion requests to the AI service. The AI service owns LangGraph, local embeddings, Groq synthesis, BM25+dense retrieval, Pinecone vector persistence, Neon metadata persistence, Redis configuration, source connectors, and evidence synthesis. Dense embeddings run locally through Sentence Transformers using `sentence-transformers/all-MiniLM-L6-v2`; no Hugging Face API key is required. Pinecone and Neon gracefully fall back to local in-memory behavior when their connection settings are absent or unavailable.

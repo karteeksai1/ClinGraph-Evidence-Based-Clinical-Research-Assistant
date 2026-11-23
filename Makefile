@@ -1,7 +1,8 @@
-.PHONY: dev backend ai frontend build test
+.PHONY: backend ai frontend install test
 
-dev:
-	docker compose up --build
+install:
+	python3 -m pip install -r services/ai/requirements.txt -r services/backend/requirements.txt
+	cd services/frontend && npm install
 
 backend:
 	cd services/backend && uvicorn app.main:app --reload --port 8000
@@ -11,9 +12,6 @@ ai:
 
 frontend:
 	cd services/frontend && npm install && npm run dev
-
-build:
-	docker compose build
 
 test:
 	python3 -m compileall -q services
