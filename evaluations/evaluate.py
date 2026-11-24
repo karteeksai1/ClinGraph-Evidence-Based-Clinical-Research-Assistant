@@ -30,6 +30,19 @@ class TinyEmbedder:
     embed_document = embed_query
 
 
+class RagasEmbeddingAdapter:
+    """Expose the interface expected by RAGAS 0.4's compatibility metrics."""
+
+    def __init__(self, embedder):
+        self.embedder = embedder
+
+    def embed_query(self, text):
+        return list(self.embedder.embed_query(text))
+
+    def embed_documents(self, texts):
+        return [list(self.embedder.embed_document(text)) for text in texts]
+
+
 def load_cases():
     with (ROOT / "evaluations" / "dataset.jsonl").open() as handle:
         return [json.loads(line) for line in handle if line.strip()]
@@ -46,7 +59,6 @@ def provider_metrics(rows):
     try:
         from ragas import EvaluationDataset, evaluate
         from ragas.llms import llm_factory
-        from ragas.embeddings import HuggingFaceEmbeddings
         # Ragas 0.4's compatibility metric classes are still the objects
         # accepted by evaluate(); the newer collections classes are for the
         # experiment API and are rejected by the legacy evaluate() function.
@@ -69,10 +81,16 @@ def provider_metrics(rows):
             ragas_llm = llm_factory(settings.groq_model, provider="openai", client=groq_openai_client)
         else:
             ragas_llm = llm_factory(os.getenv("RAGAS_MODEL", "gpt-4o-mini"), provider="openai")
-        ragas_embeddings = HuggingFaceEmbeddings(
-            model=settings.embedding_model,
-            device=settings.embedding_device,
-        )
+        from app.retrieval import HashEmbedder, LocalEmbedder
+        try:
+            evaluation_embedder = LocalEmbedder(
+                model_name=settings.embedding_model,
+                device=settings.embedding_device,
+                local_files_only=True,
+            )
+        except Exception:
+            evaluation_embedder = HashEmbedder()
+        ragas_embeddings = RagasEmbeddingAdapter(evaluation_embedder)
         dataset = EvaluationDataset.from_list([
             {"user_input": row["question"], "response": row["answer"],
              "retrieved_contexts": row["contexts"], "reference": row["reference_answer"]}
@@ -84,6 +102,8 @@ def provider_metrics(rows):
         result["ragas"] = {"status": "not_run", "reason": str(exc)}
 
     try:
+        if not os.getenv("OPENAI_API_KEY"):
+            raise RuntimeError("Set OPENAI_API_KEY to run DeepEval's built-in LLM metrics; deterministic tool metrics already ran")
         from deepeval import evaluate
         from deepeval.metrics import AnswerRelevancyMetric, ContextualRelevancyMetric, FaithfulnessMetric
         from deepeval.test_case import LLMTestCase
