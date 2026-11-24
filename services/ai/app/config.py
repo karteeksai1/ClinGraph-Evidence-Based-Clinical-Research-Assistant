@@ -1,4 +1,5 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,8 +24,15 @@ class Settings(BaseSettings):
     pinecone_namespace: str = "clinical-evidence"
     redis_url: str = ""
     redis_cache_ttl_seconds: int = 3600
+    evaluation_dataset_path: str = "evaluations/dataset.jsonl"
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Resolve the repository .env regardless of whether uvicorn is started from
+    # the repository root, services/ai, or a process manager's working folder.
+    _repo_root = Path(__file__).resolve().parents[3]
+    model_config = SettingsConfigDict(
+        env_file=(str(_repo_root / ".env"), ".env"),
+        extra="ignore",
+    )
 
 
 @lru_cache

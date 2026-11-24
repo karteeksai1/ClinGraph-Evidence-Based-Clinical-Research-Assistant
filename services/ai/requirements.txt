@@ -10,3 +10,6 @@ psycopg[binary]>=3.2,<4.0
 pinecone>=7.0,<8.0
 groq>=0.30,<1.0
 redis>=6.0,<7.0
+# Offline RAG and agent evaluation (optional at runtime; required by evaluations/evaluate.py)
+ragas>=0.2,<1.0
+deepeval>=2.0,<3.0

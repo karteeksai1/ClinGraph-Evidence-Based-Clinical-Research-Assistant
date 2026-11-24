@@ -1,5 +1,6 @@
 import math
 import re
+import hashlib
 from collections import Counter
 from dataclasses import dataclass
 
@@ -34,6 +35,28 @@ class LocalEmbedder:
         else:
             vector = self.model.encode(text, normalize_embeddings=True)
         return tuple(float(value) for value in vector)
+
+
+class HashEmbedder:
+    """Dependency-free fallback for offline development and smoke tests."""
+
+    def __init__(self, dimensions: int = 384):
+        self.dimensions = dimensions
+
+    def _embed(self, text: str) -> tuple[float, ...]:
+        values = [0.0] * self.dimensions
+        for token in tokenize(text):
+            digest = hashlib.sha256(token.encode()).digest()
+            index = int.from_bytes(digest[:4], "big") % self.dimensions
+            values[index] += 1.0 if digest[4] % 2 else -1.0
+        norm = math.sqrt(sum(value * value for value in values)) or 1.0
+        return tuple(value / norm for value in values)
+
+    def embed_query(self, text: str) -> tuple[float, ...]:
+        return self._embed(text)
+
+    def embed_document(self, text: str) -> tuple[float, ...]:
+        return self._embed(text)
 
     def embed_document(self, text: str) -> tuple[float, ...]:
         if hasattr(self.model, "encode_document"):

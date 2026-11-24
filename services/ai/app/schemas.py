@@ -30,6 +30,9 @@ class ResearchResponse(BaseModel):
     citations: list[str]
     confidence: str
     results: list[SearchResult]
+    tool_calls: list[dict] = Field(default_factory=list)
+    judge: dict = Field(default_factory=dict)
+    agent_trace: list[str] = Field(default_factory=list)
 
 
 class IngestRequest(SearchRequest):
