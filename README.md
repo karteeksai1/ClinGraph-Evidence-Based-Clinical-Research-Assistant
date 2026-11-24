@@ -42,6 +42,20 @@ ClinGraph is a clinical research assistant that helps users discover, connect, c
 - **Extensibility:** Support additional sources, ontologies, rerankers, and language models without changing the core API.
 - **Safety:** Clearly label the product as a research assistant, not a diagnostic or treatment system.
 
+### Raw data sources
+
+The AI service currently fetches raw evidence only when an ingestion endpoint is called:
+
+- **PubMed/NCBI E-utilities:** searches PubMed IDs, fetches citation metadata, and fetches XML records containing titles and abstracts. An NCBI API key is optional for basic use; an email address is recommended.
+- **ClinicalTrials.gov API v2:** fetches registered-study identifiers, titles, brief summaries, conditions, status, and source URLs.
+- **Demo fallback:** two small local documents are loaded when Neon has no persisted documents and no ingestion has been run.
+
+The application does not automatically crawl the web, use patient records, or fetch data during ordinary research queries. Retrieved records are persisted as metadata in Neon and their local embeddings can be upserted to Pinecone.
+
+### Evaluation status
+
+Ragas and DeepEval are **not currently used**. The runtime has citation verification and retrieval scoring, but no automated RAG-quality metric pipeline yet. See [`evaluations/README.md`](evaluations/README.md) for the planned offline evaluation layer.
+
 ### MVP boundaries
 
 The first release should focus on literature and trial research. It should not make patient-specific diagnoses, recommend treatment, replace clinician judgment, or ingest protected health information.
@@ -130,6 +144,7 @@ clinGraph/
 │   ├── frontend/       # Next.js web application
 │   ├── backend/        # Public FastAPI API and service boundary
 │   └── ai/             # LangGraph, retrieval, synthesis, ingestion
+├── evaluations/        # Future Ragas/DeepEval offline evaluation datasets
 ├── packages/
 │   └── contracts/      # Shared API contract
 ├── Makefile
