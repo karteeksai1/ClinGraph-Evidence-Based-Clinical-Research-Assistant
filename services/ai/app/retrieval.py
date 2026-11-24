@@ -36,6 +36,13 @@ class LocalEmbedder:
             vector = self.model.encode(text, normalize_embeddings=True)
         return tuple(float(value) for value in vector)
 
+    def embed_document(self, text: str) -> tuple[float, ...]:
+        if hasattr(self.model, "encode_document"):
+            vector = self.model.encode_document(text, normalize_embeddings=True)
+        else:
+            vector = self.model.encode(text, normalize_embeddings=True)
+        return tuple(float(value) for value in vector)
+
 
 class HashEmbedder:
     """Dependency-free fallback for offline development and smoke tests."""
@@ -57,14 +64,6 @@ class HashEmbedder:
 
     def embed_document(self, text: str) -> tuple[float, ...]:
         return self._embed(text)
-
-    def embed_document(self, text: str) -> tuple[float, ...]:
-        if hasattr(self.model, "encode_document"):
-            vector = self.model.encode_document(text, normalize_embeddings=True)
-        else:
-            vector = self.model.encode(text, normalize_embeddings=True)
-        return tuple(float(value) for value in vector)
-
 
 @dataclass(frozen=True)
 class Document:

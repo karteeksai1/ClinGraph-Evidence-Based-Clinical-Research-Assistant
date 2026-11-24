@@ -27,7 +27,9 @@ try:
     embedder = LocalEmbedder(
         model_name=settings.embedding_model,
         device=settings.embedding_device,
-        local_files_only=settings.embedding_local_files_only,
+        # Development startup must never block on a network model download;
+        # use the hash fallback if the model is not already cached locally.
+        local_files_only=settings.embedding_local_files_only or settings.app_env == "development",
     )
 except Exception:
     logging.getLogger(__name__).warning("Embedding model unavailable; using deterministic hash embeddings")
