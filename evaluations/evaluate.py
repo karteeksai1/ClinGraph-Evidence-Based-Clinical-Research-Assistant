@@ -6,8 +6,14 @@ evaluation provider or network access at request time.
 """
 
 import json
+import os
 import sys
 from pathlib import Path
+
+# DeepEval currently passes a Sentry option removed by some Sentry SDK
+# versions. Evaluation is local by default, so disable its telemetry before
+# importing DeepEval; users can explicitly opt in outside this script.
+os.environ.setdefault("DEEPEVAL_TELEMETRY_OPT_OUT", "YES")
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "services" / "ai"))
@@ -38,14 +44,32 @@ def provider_metrics(rows):
     result = {}
     try:
         from ragas import EvaluationDataset, evaluate
-        from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
+        from ragas.llms import llm_factory
+        from ragas.embeddings import HuggingFaceEmbeddings
+        try:
+            from ragas.metrics.collections import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
+        except ImportError:
+            from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
 
+        from app.config import get_settings
+        settings = get_settings()
+        if not settings.groq_api_key and not os.getenv("OPENAI_API_KEY"):
+            raise RuntimeError("Set GROQ_API_KEY or OPENAI_API_KEY to run LLM-backed RAGAS metrics")
+        if settings.groq_api_key:
+            from groq import Groq
+            ragas_llm = llm_factory(settings.groq_model, provider="openai", client=Groq(api_key=settings.groq_api_key))
+        else:
+            ragas_llm = llm_factory(os.getenv("RAGAS_MODEL", "gpt-4o-mini"), provider="openai")
+        ragas_embeddings = HuggingFaceEmbeddings(
+            model=settings.embedding_model,
+            device=settings.embedding_device,
+        )
         dataset = EvaluationDataset.from_list([
             {"user_input": row["question"], "response": row["answer"],
              "retrieved_contexts": row["contexts"], "reference": row["reference_answer"]}
             for row in rows
         ])
-        scored = evaluate(dataset, metrics=[ContextPrecision(), ContextRecall(), Faithfulness(), AnswerRelevancy()])
+        scored = evaluate(dataset, metrics=[ContextPrecision(llm=ragas_llm), ContextRecall(llm=ragas_llm), Faithfulness(llm=ragas_llm), AnswerRelevancy(llm=ragas_llm, embeddings=ragas_embeddings)])
         result["ragas"] = dict(scored)
     except Exception as exc:
         result["ragas"] = {"status": "not_run", "reason": str(exc)}

@@ -13,3 +13,6 @@ redis>=6.0,<7.0
 # Offline RAG and agent evaluation (optional at runtime; required by evaluations/evaluate.py)
 ragas>=0.2,<1.0
 deepeval>=2.0,<3.0
+# DeepEval 2.x currently initializes this API; keep it below the incompatible
+# major version unless DeepEval updates its telemetry integration.
+sentry-sdk<3.0

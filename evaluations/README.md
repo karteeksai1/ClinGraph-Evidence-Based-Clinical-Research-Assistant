@@ -20,6 +20,8 @@ The runner measures:
 
 Run from the repository root with `python evaluations/evaluate.py`. Ragas and DeepEval are intentionally offline dependencies; they are not run during normal user requests.
 
+The evaluator disables DeepEval telemetry by default. If importing DeepEval directly, use `DEEPEVAL_TELEMETRY_OPT_OUT=YES` in the shell to avoid an SDK telemetry compatibility error.
+
 ## RAG corpus
 
 At startup the AI service loads documents from `DATABASE_URL` when configured. If the database is empty or unavailable, it uses two demo documents embedded in `services/ai/app/main.py`. New evidence is added only by `/internal/v1/ingest/pubmed` or `/internal/v1/ingest/clinicaltrials`, which call PubMed/NCBI E-utilities and ClinicalTrials.gov API v2, persist metadata to Neon, and add embeddings to the local hybrid index/Pinecone when configured. Normal research requests do not crawl the web.
