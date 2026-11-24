@@ -8,6 +8,7 @@ evaluation provider or network access at request time.
 import json
 import os
 import sys
+import warnings
 from pathlib import Path
 
 # DeepEval currently passes a Sentry option removed by some Sentry SDK
@@ -46,9 +47,11 @@ def provider_metrics(rows):
         from ragas import EvaluationDataset, evaluate
         from ragas.llms import llm_factory
         from ragas.embeddings import HuggingFaceEmbeddings
-        try:
-            from ragas.metrics.collections import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
-        except ImportError:
+        # Ragas 0.4's compatibility metric classes are still the objects
+        # accepted by evaluate(); the newer collections classes are for the
+        # experiment API and are rejected by the legacy evaluate() function.
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
             from ragas.metrics import AnswerRelevancy, ContextPrecision, ContextRecall, Faithfulness
 
         from app.config import get_settings
@@ -56,8 +59,14 @@ def provider_metrics(rows):
         if not settings.groq_api_key and not os.getenv("OPENAI_API_KEY"):
             raise RuntimeError("Set GROQ_API_KEY or OPENAI_API_KEY to run LLM-backed RAGAS metrics")
         if settings.groq_api_key:
-            from groq import Groq
-            ragas_llm = llm_factory(settings.groq_model, provider="openai", client=Groq(api_key=settings.groq_api_key))
+            from openai import OpenAI
+            # Groq exposes an OpenAI-compatible endpoint; RAGAS specifically
+            # validates that the client is an openai.OpenAI instance.
+            groq_openai_client = OpenAI(
+                api_key=settings.groq_api_key,
+                base_url="https://api.groq.com/openai/v1",
+            )
+            ragas_llm = llm_factory(settings.groq_model, provider="openai", client=groq_openai_client)
         else:
             ragas_llm = llm_factory(os.getenv("RAGAS_MODEL", "gpt-4o-mini"), provider="openai")
         ragas_embeddings = HuggingFaceEmbeddings(

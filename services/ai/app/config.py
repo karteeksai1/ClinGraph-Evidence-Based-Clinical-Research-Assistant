@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     embedding_device: str = "cpu"
     embedding_local_files_only: bool = False
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
     database_url: str = ""
     pinecone_api_key: str = ""
     pinecone_index_name: str = "clingraph-evidence"
